@@ -3,14 +3,18 @@ package com.digitalocean.batchinference.inference;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
  * Placeholder client that lets the scheduling core run end-to-end without a real
- * endpoint. It is {@code @Primary} so that adding an HTTP client alongside it does not
- * break the context; drop the annotation here once the real client is wired in.
+ * endpoint. Registered only when {@code inference.client=stub}; the default is
+ * {@link HttpInferenceClient}. Leaving this bean unconditional was enough to put an
+ * "echoing, no real inference" warning in every production startup log even though
+ * {@code @Primary} meant nothing ever called it.
  */
 @Component
+@ConditionalOnProperty(prefix = "inference", name = "client", havingValue = "stub")
 public class StubInferenceClient implements InferenceClient {
 
     private static final Logger log = LoggerFactory.getLogger(StubInferenceClient.class);

@@ -38,7 +38,8 @@ class HttpInferenceClientIntegrationTest {
 
     private static HttpInferenceClient clientFor(String baseUrl, Duration connectTimeout, Duration readTimeout) {
         InferencePayloadMapper mapper = new PassthroughPayloadMapper(new ObjectMapper());
-        InferenceProperties properties = new InferenceProperties(baseUrl, "", connectTimeout, readTimeout);
+        InferenceProperties properties =
+                new InferenceProperties(baseUrl, "", connectTimeout, readTimeout, "http");
         return new HttpInferenceClient(properties, mapper, new ErrorClassifier(mapper));
     }
 
@@ -120,7 +121,8 @@ class HttpInferenceClientIntegrationTest {
             }
         };
         InferenceProperties properties = new InferenceProperties(
-                "http://localhost:" + port + "/mock/no-such-api", "", Duration.ofSeconds(2), Duration.ofSeconds(10));
+                "http://localhost:" + port + "/mock/no-such-api", "",
+                Duration.ofSeconds(2), Duration.ofSeconds(10), "http");
         HttpInferenceClient client =
                 new HttpInferenceClient(properties, exploding, new ErrorClassifier(exploding));
 

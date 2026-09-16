@@ -16,7 +16,12 @@ import java.util.concurrent.ThreadLocalRandom;
  * the window, which is the only reason this class exists.
  *
  * <p>A {@code Retry-After} hint is a floor, never a ceiling: the endpoint knows when it
- * expects to be ready, so the delay is the larger of the hint and the jittered value.
+ * expects to be ready, so the jitter is added on top of the hint rather than replacing
+ * it. Taking {@code max(hint, jitter)} instead would collapse the spread to exactly the
+ * hint whenever the hint outruns the jitter window — which is the common case, since a
+ * hint only ever accompanies a 429 and the window starts at a fraction of a second. That
+ * is precisely the burst this class exists to break up, so the delay must stay random
+ * even when the floor dominates.
  */
 @Component
 public class ExponentialBackoffWithJitter implements BackoffPolicy {
@@ -33,8 +38,17 @@ public class ExponentialBackoffWithJitter implements BackoffPolicy {
     public Duration nextDelay(int attemptNumber, Duration retryAfterHint) {
         long cap = capMillis(attemptNumber);
         long jittered = cap <= 0 ? 0L : ThreadLocalRandom.current().nextLong(0, cap);
-        long hint = retryAfterHint == null ? 0L : retryAfterHint.toMillis();
-        return Duration.ofMillis(Math.max(hint, jittered));
+        long hint = retryAfterHint == null ? 0L : Math.max(0L, retryAfterHint.toMillis());
+        return Duration.ofMillis(saturatingSum(hint, jittered));
+    }
+
+    /** A hostile {@code Retry-After} can sit near {@code Long.MAX_VALUE}; clamp, don't wrap. */
+    private static long saturatingSum(long hint, long jittered) {
+        try {
+            return Math.addExact(hint, jittered);
+        } catch (ArithmeticException overflow) {
+            return Long.MAX_VALUE;
+        }
     }
 
     /**

@@ -31,7 +31,7 @@ class ExponentialBackoffWithJitterTest {
     private static final int SAMPLES = 2_000;
 
     private static RetryProperties properties(int maxAttempts, Duration initial, Duration max) {
-        return new RetryProperties(maxAttempts, initial, max);
+        return new RetryProperties(maxAttempts, initial, max, "default");
     }
 
     @Nested
@@ -84,12 +84,18 @@ class ExponentialBackoffWithJitterTest {
                 properties(3, Duration.ofMillis(200), Duration.ofSeconds(5)));
 
         @Test
-        void hintLargerThanTheJitteredDelayWins() {
+        void hintThatOutrunsTheJitterWindowIsStillJitteredRatherThanReturnedVerbatim() {
+            // The regression this guards: a 1s Retry-After against an 800ms window used to
+            // return exactly 1000ms every time, so every worker that took a 429 in the same
+            // burst woke in the same millisecond and rebuilt the burst one backoff later.
             Duration hint = Duration.ofSeconds(30);
+            long cap = Math.min(5_000L, 200L * (1L << 3));
 
-            for (int i = 0; i < SAMPLES; i++) {
-                assertThat(policy.nextDelay(3, hint)).isEqualTo(hint);
-            }
+            List<Long> delays = sample(policy, 3, hint);
+
+            assertThat(delays).allSatisfy(delay ->
+                    assertThat(delay).isBetween(hint.toMillis(), hint.toMillis() + cap));
+            assertThat(Set.copyOf(delays)).hasSizeGreaterThan(SAMPLES / 4);
         }
 
         @Test
@@ -101,10 +107,27 @@ class ExponentialBackoffWithJitterTest {
 
             // A floor of 1ms must not collapse the distribution onto 1ms: the delays stay
             // spread across the jitter window, every sample respecting the floor.
-            assertThat(delays).allSatisfy(delay -> assertThat(delay).isBetween(1L, cap));
+            assertThat(delays).allSatisfy(delay -> assertThat(delay).isBetween(1L, 1L + cap));
             assertThat(Set.copyOf(delays)).hasSizeGreaterThan(SAMPLES / 4);
             assertThat(delays.stream().mapToLong(Long::longValue).max().orElseThrow())
                     .isGreaterThan(cap / 2);
+        }
+
+        @Test
+        void hintIsNeverUndercutEvenWhenTheJitterWindowIsZero() {
+            ExponentialBackoffWithJitter noBackoff = new ExponentialBackoffWithJitter(
+                    properties(3, Duration.ZERO, Duration.ofSeconds(5)));
+
+            assertThat(noBackoff.nextDelay(2, Duration.ofSeconds(2))).isEqualTo(Duration.ofSeconds(2));
+        }
+
+        @Test
+        void absurdHintSaturatesInsteadOfWrappingNegative() {
+            Duration hint = Duration.ofMillis(Long.MAX_VALUE);
+
+            for (int i = 0; i < SAMPLES; i++) {
+                assertThat(policy.nextDelay(3, hint).toMillis()).isPositive();
+            }
         }
     }
 

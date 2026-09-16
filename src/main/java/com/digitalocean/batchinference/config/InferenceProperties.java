@@ -10,6 +10,13 @@ public record InferenceProperties(
         @DefaultValue("http://localhost:8080/mock/v1") String baseUrl,
         @DefaultValue("") String apiKey,
         @DefaultValue("2s") Duration connectTimeout,
-        @DefaultValue("10s") Duration readTimeout
+        @DefaultValue("10s") Duration readTimeout,
+        /**
+         * Which {@code InferenceClient} to register: {@code http} for the real endpoint,
+         * {@code stub} for the echoing placeholder. Read by {@code @ConditionalOnProperty}
+         * before binding happens, so nothing injects this — it is declared to keep the
+         * switch discoverable in configuration metadata rather than implicit in annotations.
+         */
+        @DefaultValue("http") String client
 ) {
 }

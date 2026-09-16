@@ -3,6 +3,7 @@ spring:
     virtual:
       enabled: true
 inference:
+  client: http          # http = real endpoint, stub = echoing placeholder
   base-url: http://localhost:8080/mock/v1
   api-key: ""
   connect-timeout: 2s
@@ -12,6 +13,7 @@ concurrency:
   batch-queue-capacity: 100
   max-batch-size: 1000
 retry:
+  executor: default        # default = retry with backoff, none = single call, no retries
   max-attempts: 3          # 3 TOTAL attempts: initial call + 2 retries
   initial-backoff: 200ms
   max-backoff: 5s
