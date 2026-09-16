@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 import java.net.ServerSocket;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -38,9 +39,18 @@ class HttpInferenceClientIntegrationTest {
 
     private static HttpInferenceClient clientFor(String baseUrl, Duration connectTimeout, Duration readTimeout) {
         InferencePayloadMapper mapper = new PassthroughPayloadMapper(new ObjectMapper());
-        InferenceProperties properties =
-                new InferenceProperties(baseUrl, "", connectTimeout, readTimeout, "http");
-        return new HttpInferenceClient(properties, mapper, new ErrorClassifier(mapper));
+        return new HttpInferenceClient(mockProperties(baseUrl, connectTimeout, readTimeout),
+                mapper, classifierFor(mapper));
+    }
+
+    /** The mock speaks the passthrough shape at {@code /infer}, not the DigitalOcean one. */
+    private static InferenceProperties mockProperties(String baseUrl, Duration connectTimeout, Duration readTimeout) {
+        return new InferenceProperties(baseUrl, "/infer", "", "unused-model", 512, 0.7,
+                connectTimeout, readTimeout, "http", "passthrough");
+    }
+
+    private static ErrorClassifier classifierFor(InferencePayloadMapper mapper) {
+        return new ErrorClassifier(mapper, new ObjectMapper(), Clock.systemUTC());
     }
 
     @Test
@@ -120,11 +130,10 @@ class HttpInferenceClientIntegrationTest {
                 throw new AssertionError("payload mapper must not run on a non-2xx response");
             }
         };
-        InferenceProperties properties = new InferenceProperties(
-                "http://localhost:" + port + "/mock/no-such-api", "",
-                Duration.ofSeconds(2), Duration.ofSeconds(10), "http");
+        InferenceProperties properties = mockProperties("http://localhost:" + port + "/mock/no-such-api",
+                Duration.ofSeconds(2), Duration.ofSeconds(10));
         HttpInferenceClient client =
-                new HttpInferenceClient(properties, exploding, new ErrorClassifier(exploding));
+                new HttpInferenceClient(properties, exploding, classifierFor(exploding));
 
         InferenceOutcome outcome = client.infer(new InferenceRequest("unknown route"));
 

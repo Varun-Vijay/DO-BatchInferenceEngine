@@ -1,0 +1,45 @@
+# App Platform spec. Apply with:
+#   doctl apps create --spec .do/app.yaml
+# and thereafter:
+#   doctl apps update <app-id> --spec .do/app.yaml
+name: batch-inference-engine
+region: nyc
+
+services:
+  - name: api
+    github:
+      repo: Varun-Vijay/DO-BatchInferenceEngine
+      branch: main
+      deploy_on_push: true
+
+    dockerfile_path: Dockerfile
+    # The container listens on $PORT, which App Platform sets to this value.
+    http_port: 8080
+    # Batches live in memory, so a second instance would answer status queries for
+    # work it never ran. Scaling out needs a shared repository first.
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+
+    health_check:
+      http_path: /actuator/health
+      # A cold JVM plus Spring context startup takes longer than the 0s default,
+      # which would otherwise fail the first probe and restart the container.
+      initial_delay_seconds: 60
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 3
+
+    routes:
+      - path: /
+
+    envs:
+      # Replace the placeholder before applying, or set it in the control panel under
+      # Settings -> App-Level Environment Variables. App Platform encrypts a SECRET on
+      # first apply and rewrites the value as EV[1:...]; never commit the real key.
+      - key: INFERENCE_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_WITH_MODEL_ACCESS_KEY
+      - key: INFERENCE_MODEL
+        scope: RUN_TIME
+        value: llama3.3-70b-instruct

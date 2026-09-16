@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -15,7 +16,9 @@ import org.springframework.web.client.RestClient;
 import java.net.http.HttpClient;
 
 /**
- * Calls {@code POST {inference.base-url}/infer} and reports the result as a value.
+ * Calls {@code POST {inference.base-url}{inference.path}} and reports the result as a
+ * value. Against DigitalOcean serverless inference that is
+ * {@code https://inference.do-ai.run/v1/chat/completions}.
  *
  * <p>{@link #infer} never throws: every transport error, error status and parse failure
  * is turned into an {@link InferenceOutcome} by {@link ErrorClassifier}, so the
@@ -27,10 +30,9 @@ import java.net.http.HttpClient;
 public class HttpInferenceClient implements InferenceClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpInferenceClient.class);
-    private static final String INFER_PATH = "/infer";
-    private static final String API_KEY_HEADER = "X-API-Key";
 
     private final RestClient restClient;
+    private final String path;
     private final InferencePayloadMapper payloadMapper;
     private final ErrorClassifier errorClassifier;
 
@@ -39,9 +41,11 @@ public class HttpInferenceClient implements InferenceClient {
                                ErrorClassifier errorClassifier) {
         this.payloadMapper = payloadMapper;
         this.errorClassifier = errorClassifier;
+        this.path = properties.path();
         this.restClient = buildRestClient(properties);
-        log.info("HTTP inference client ready: baseUrl={} connectTimeout={} readTimeout={} apiKey={}",
-                properties.baseUrl(), properties.connectTimeout(), properties.readTimeout(),
+        log.info("HTTP inference client ready: url={}{} model={} connectTimeout={} readTimeout={} apiKey={}",
+                properties.baseUrl(), properties.path(), properties.model(),
+                properties.connectTimeout(), properties.readTimeout(),
                 StringUtils.hasText(properties.apiKey()) ? "set" : "absent");
     }
 
@@ -63,7 +67,7 @@ public class HttpInferenceClient implements InferenceClient {
                 .defaultStatusHandler(status -> true, (request, response) -> {
                 });
         if (StringUtils.hasText(properties.apiKey())) {
-            builder.defaultHeader(API_KEY_HEADER, properties.apiKey());
+            builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey());
         }
         return builder.build();
     }
@@ -75,7 +79,7 @@ public class HttpInferenceClient implements InferenceClient {
         Throwable failure = null;
         try {
             response = restClient.post()
-                    .uri(INFER_PATH)
+                    .uri(path)
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
                     .body(payloadMapper.toWirePayload(request))

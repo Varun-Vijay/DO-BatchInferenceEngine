@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -33,5 +34,14 @@ public class BeanConfig {
     @Bean
     public Semaphore inFlightSemaphore(ConcurrencyProperties properties) {
         return new Semaphore(properties.maxInFlight());
+    }
+
+    /**
+     * Injected rather than read statically so that the {@code ratelimit-reset} arithmetic
+     * in {@code ErrorClassifier} can be driven from a fixed instant in tests.
+     */
+    @Bean
+    public Clock clock() {
+        return Clock.systemUTC();
     }
 }

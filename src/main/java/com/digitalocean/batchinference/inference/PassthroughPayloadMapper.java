@@ -2,15 +2,20 @@ package com.digitalocean.batchinference.inference;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
  * Mapper for the neutral wire shape: {@code {"prompt": ...}} out,
  * {@code {"completion": ..., "tokens": ...}} back. The domain records already match it,
- * so there is nothing to translate. The seam exists so that swapping in a vendor payload
- * shape later touches only this class.
+ * so there is nothing to translate.
+ *
+ * <p>This is what the in-app mock at {@code /mock/v1/infer} speaks. The real endpoint
+ * wants the OpenAI shape — see {@link ChatCompletionsPayloadMapper}, which is the
+ * default. Select this one with {@code inference.payload-format=passthrough}.
  */
 @Component
+@ConditionalOnProperty(prefix = "inference", name = "payload-format", havingValue = "passthrough")
 public class PassthroughPayloadMapper implements InferencePayloadMapper {
 
     private final ObjectMapper objectMapper;

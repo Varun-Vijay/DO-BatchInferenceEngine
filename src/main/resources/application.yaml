@@ -1,14 +1,33 @@
+server:
+  # App Platform injects PORT and routes to it; 8080 keeps local runs unchanged.
+  port: ${PORT:8080}
 spring:
   threads:
     virtual:
       enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
 inference:
-  client: http          # http = real endpoint, stub = echoing placeholder
-  base-url: http://localhost:8080/mock/v1
-  api-key: ""
+  client: http                              # http = real endpoint, stub = echoing placeholder
+  payload-format: chat-completions          # chat-completions = DigitalOcean/OpenAI shape, passthrough = local mock shape
+  base-url: https://inference.do-ai.run/v1
+  path: /chat/completions
+  api-key: ${INFERENCE_API_KEY:}            # DigitalOcean model access key; never commit a real one
+  model: ${INFERENCE_MODEL:llama3.3-70b-instruct}
+  max-completion-tokens: 512
+  temperature: 0.7
   connect-timeout: 2s
-  read-timeout: 10s
+  read-timeout: 60s                         # bounds a whole generation, not a mock round trip
 concurrency:
+  # The endpoint allows 250 requests/minute (~4/s). At 10 in flight against multi-second
+  # generation latency this lands under that; raise it and 429s become the normal case.
   max-in-flight: 10
   batch-queue-capacity: 100
   max-batch-size: 1000
@@ -19,7 +38,7 @@ retry:
   max-backoff: 5s
 mock:
   inference:
-    enabled: true
+    enabled: false         # the in-app mock is superseded by the real endpoint
     base-latency: 150ms
     latency-jitter: 100ms
     max-concurrent: 4
