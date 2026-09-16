@@ -1,17 +1,15 @@
 package com.digitalocean.batchinference.retry;
 
 import com.digitalocean.batchinference.inference.InferenceOutcome;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.util.function.Supplier;
 
 /**
- * Placeholder executor: calls once and reports the outcome verbatim. It is
- * {@code @Primary} so a real backoff-driven executor can be added beside it without
- * breaking the context; drop the annotation here once that executor exists.
+ * Placeholder executor: calls once and reports the outcome verbatim. Superseded as the
+ * default by {@link DefaultRetryExecutor}; kept so retries can be taken out of the
+ * picture when diagnosing the scheduling core.
  */
-@Primary
 @Component
 public class NoRetryExecutor implements RetryExecutor {
 

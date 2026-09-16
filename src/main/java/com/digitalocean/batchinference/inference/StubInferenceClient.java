@@ -3,7 +3,6 @@ package com.digitalocean.batchinference.inference;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Component;
  * endpoint. It is {@code @Primary} so that adding an HTTP client alongside it does not
  * break the context; drop the annotation here once the real client is wired in.
  */
-@Primary
 @Component
 public class StubInferenceClient implements InferenceClient {
 

@@ -20,7 +20,13 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+/**
+ * Exercises the scheduling core, so it pins the stub client: the assertions here are
+ * about queueing and status transitions, not about talking to an endpoint.
+ */
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "inference.client=stub")
 class BatchFlowIntegrationTest {
 
     @Autowired
