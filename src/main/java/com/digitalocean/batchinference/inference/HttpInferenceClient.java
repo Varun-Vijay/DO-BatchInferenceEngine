@@ -85,7 +85,7 @@ public class HttpInferenceClient implements InferenceClient {
                     .body(payloadMapper.toWirePayload(request))
                     .retrieve()
                     .toEntity(String.class);
-        } catch (Exception e) {
+        } catch (Exception e) {a
             failure = e;
         }
         long latencyMs = (System.nanoTime() - startNanos) / 1_000_000;
