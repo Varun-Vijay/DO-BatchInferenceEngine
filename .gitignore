@@ -19,6 +19,24 @@
 *.tar.gz
 *.rar
 
+# Must stay below *.jar — later patterns win, and without this the Maven wrapper jar is
+# excluded, so ./mvnw fails on a clean CI checkout while still working locally.
+!.mvn/wrapper/maven-wrapper.jar
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Build output
+target/
+
+# Locally provisioned JDK used only for building on this machine
+.tools/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+#MacOS
+.DS_Store

@@ -1,0 +1,24 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+inference:
+  base-url: http://localhost:8080/mock/v1
+  api-key: ""
+  connect-timeout: 2s
+  read-timeout: 10s
+concurrency:
+  max-in-flight: 10
+  batch-queue-capacity: 100
+  max-batch-size: 1000
+retry:
+  max-attempts: 3          # 3 TOTAL attempts: initial call + 2 retries
+  initial-backoff: 200ms
+  max-backoff: 5s
+mock:
+  inference:
+    enabled: true
+    base-latency: 150ms
+    latency-jitter: 100ms
+    max-concurrent: 4
+    retry-after: 1s
