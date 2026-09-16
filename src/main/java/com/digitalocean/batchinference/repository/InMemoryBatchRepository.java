@@ -29,7 +29,7 @@ public class InMemoryBatchRepository implements BatchRepository {
         tasks.forEach(task -> tasksById.put(task.id(), task));
         taskIdsByBatch.put(batch.id(), tasks.stream().map(PromptTask::id).toList());
         batches.put(batch.id(), batch);
-    }a
+    }
 
     @Override
     public Optional<Batch> findBatch(String batchId) {
